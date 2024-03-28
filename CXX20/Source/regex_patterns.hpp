@@ -2,7 +2,7 @@
 #include <regex>
 #include <string>
 
-namespace regex_patterns
+namespace regex_lib
 {
      template<typename CharT>
      using tstring = std::basic_string<CharT, std::char_traits<CharT>, std::allocator<CharT>>;
@@ -37,7 +37,13 @@ namespace regex_patterns
           );
      }
 
-    // constants
-    static const auto email_validation_pattern = R"(^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$)"s;
-    static const auto split_email_validation_patter =  R"(^([A-Z0-9._%+-]+)@([A-Z0-9.-]+)\.([A-Z]{2,})$)"s;
+    inline namespace regex_patterns
+     {
+          // constants
+          static const auto email_validation_pattern = R"(^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$)"s;
+          static const auto split_email_validation_patter =  R"(^([A-Z0-9._%+-]+)@([A-Z0-9.-]+)\.([A-Z]{2,})$)"s;
+          static const auto name_value_validation_pattern = R"(^\s*(?!#)(\w+)\s*=\s*([\w\d]+[\w\d._,\-:]*)$)"s;
+     }
+    
+     
 }
