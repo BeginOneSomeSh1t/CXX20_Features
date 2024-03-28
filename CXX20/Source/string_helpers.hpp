@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <algorithm>
 
@@ -10,6 +11,9 @@ using tstring = std::basic_string<CharT, std::char_traits<CharT>, std::allocator
 
 template<typename CharT>
 using tstringstream = std::basic_stringstream<CharT, std::char_traits<CharT>, std::allocator<CharT>>;
+
+template<typename CharT>
+using tstring_view = std::basic_string_view<CharT, std::char_traits<CharT>>;
 
 namespace string_helpers
 {
@@ -35,7 +39,7 @@ namespace string_helpers
     }
 
     template <typename CharT>
-    inline tstring<CharT> trim(tstring<CharT> const& text)
+    inline tstring_view<CharT> trim(tstring_view<CharT> text)
     {
         auto first{text.find_first_not_of(' ')};
         auto last{ text.find_last_not_of(' ') };
@@ -43,7 +47,7 @@ namespace string_helpers
     }
 
     template <typename CharT>
-   inline tstring<CharT> trim(tstring<CharT> const& text, tstring<CharT> const& chars)
+   inline tstring_view<CharT> trim(tstring_view<CharT> text, tstring_view<CharT> chars)
     {
         auto first{text.find_first_not_of(chars)};
         auto last{ text.find_last_not_of(chars) };
@@ -51,25 +55,25 @@ namespace string_helpers
     }
 
     template <typename CharT>
-    inline tstring<CharT> trimleft(tstring<CharT> const& text)
+    inline tstring_view<CharT> trimleft(tstring_view<CharT> text)
     {
         auto first{text.find_first_not_of(' ')};
         return text.substr(first, text.size() - first);
     }
     template <typename CharT>
-    inline tstring<CharT> trimright(tstring<CharT> const& text)
+    inline tstring_view<CharT> trimright(tstring_view<CharT> text)
     {
         auto last{text.find_last_not_of(' ')};
         return text.substr(0, last + 1);
     }
     template <typename CharT>
-    inline tstring<CharT> trimleft(tstring<CharT> const& text, tstring<CharT> const& chars)
+    inline tstring_view<CharT> trimleft(tstring_view<CharT> text, tstring_view<CharT> chars)
     {
         auto first{text.find_first_not_of(chars)};
         return text.substr(first, text.size() - first);
     }
     template <typename CharT>
-    inline tstring<CharT> trimright(tstring<CharT> const& text, tstring<CharT> const& chars)
+    inline tstring_view<CharT> trimright(tstring_view<CharT> text, tstring_view<CharT> chars)
     {
         auto last{text.find_last_not_of(chars)};
         return text.substr(0, last + 1);
