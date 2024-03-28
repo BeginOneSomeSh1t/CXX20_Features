@@ -1,16 +1,14 @@
 #include <iostream>
 #include "Source/regex_patterns.hpp"
 
+using namespace std::string_literals;
+
+
 int main(int argc, char* argv[])
 {
-    using namespace regex_patterns;
-    using namespace std::string_literals;
-    auto email_to_test {"PARAMA647@LOCALHOST.com"s};
+    auto text = "today is 16.02.2005"s;
+    auto rx = std::regex{regex_lib::date_validation_pattern};
 
-    auto[result, localpart, hostname, dnslable] = is_valid_email_format_with_result(split_email_validation_patter, email_to_test);
-
-    std::cout << "Result: " << result << std::endl;
-    std::cout << "Localpart: " << localpart << std::endl;
-    std::cout << "Hostname: " << hostname << std::endl;
-    std::cout << "Dnslable: " << dnslable << std::endl;
+    std::cout << std::regex_replace(text, rx, R"($5$4$3$2$1)"s) << '\n';
+    std::cout << std::regex_replace(text, rx, R"([$`][$&][$'])"s) << '\n';
 }

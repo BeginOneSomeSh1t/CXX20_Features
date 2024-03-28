@@ -43,6 +43,7 @@ namespace regex_lib
           static const auto email_validation_pattern = R"(^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$)"s;
           static const auto split_email_validation_patter =  R"(^([A-Z0-9._%+-]+)@([A-Z0-9.-]+)\.([A-Z]{2,})$)"s;
           static const auto name_value_validation_pattern = R"(^\s*(?!#)(\w+)\s*=\s*([\w\d]+[\w\d._,\-:]*)$)"s;
+          static const auto date_validation_pattern = R"((\d{1,2})(\.|-|/)(\d{1,2})(\.|-|/)(\d{4}))"s;
      }
     
      
