@@ -1,10 +1,11 @@
 #include <iostream>
-#include "Source/binary.hpp"
-#include <string>
+#include "Source/regex_patterns.hpp"
 
 int main(int argc, char* argv[])
 {
+    using namespace regex_patterns;
     using namespace std::string_literals;
-    auto text{R"!!(This text contains both "( and )".)!!"s};
-    std::cout << text << std::endl;
+    auto email_to_test {"PARAMA647@LOCALHOST.com"s};
+
+    std::cout << std::boolalpha << is_valid_format(email_validation_pattern, email_to_test) << std::endl;
 }
