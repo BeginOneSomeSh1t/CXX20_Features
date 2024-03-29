@@ -1,70 +1,29 @@
 
 #include <iostream>
-#include <format>
 
-
-struct employee
+template<typename T>
+struct wrapper
 {
-    int         id;
-    std::string first_name;
-    std::string last_name;
+    T const& value;
 };
 
-template<>
-struct std::formatter<employee>
+template<typename T>
+constexpr auto operator<(wrapper<T> const& lhs, wrapper<T> const& rhs)
 {
-    bool lexicographic_order = false;
+    return wrapper<T>{
+        lhs.value < rhs.value ? lhs.value : rhs.value
+    };
+}
 
-    template<typename ParseContext>
-    constexpr auto parse(ParseContext& ctx)
-    {
-        auto iter = ctx.begin();
-        if(iter == ctx.end()) return iter;
-        
-        auto get_char = [&](){return iter != ctx.end() ? *iter : 0;};
-
-        if(get_char() == ':') ++iter;
-        char c = get_char();
-
-        switch (c)
-        {
-        case '}': return ++iter;
-        case 'L': lexicographic_order = true; return ++iter;
-        case '{': return ++iter;
-        default: throw std::format_error("invalid format!");
-        }
-    }
-
-    template<typename FormatContext>
-    auto format(employee const& e, FormatContext& ctx)
-    {
-        if(lexicographic_order)
-            return std::format_to(
-                ctx.out(),
-                "[{}] {} {}",
-                e.id, e.last_name, e.first_name
-            );
-
-        return std::format_to(
-            ctx.out(),
-            "[{}] {} {}",
-            e.id, e.first_name, e.last_name
-        );
-    }
-};
-
-
+template<typename... Ts>
+constexpr auto min(Ts&&... rest)
+{
+    return (wrapper<Ts>{rest} < ...).value;
+}
 
 int main(int argc, char* argv[])
 {
-    try
-    {
-        auto em = employee{ 123, "John", "Doe" };
-        std::cout << std::format("{:L}", em);
-    }
-    catch (std::format_error const& e)
-    {
-        std::cout << e.what();
-    }
-   
+
+    std::cout << min(23, 32, 3, 2, 43, 1);
 }
+
