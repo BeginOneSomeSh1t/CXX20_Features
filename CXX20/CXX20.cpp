@@ -1,65 +1,137 @@
 #include <algorithm>
+#include <string>
+#include <chrono>
+#include <variant>
 #include <iostream>
-#include <unordered_set>
-#include "Source/time.hpp"
-using namespace std::string_literals;
 
-struct Item
+#include "Source/string_helpers.hpp"
+
+
+enum class genre{drama, action, sf, comedy};
+
+struct movie
 {
-    int id;
-    std::string name;
-    double value;
+    std::string title;
+    std::chrono::minutes length;
+    std::vector<genre> genres;
+};
 
-    Item(int const id, std::string const& name, double const value)
-        :
-    id(id), name(name), value(value)
-    {}
+struct track
+{
+    std::string title;
+    std::chrono::minutes length;
+};
 
-    bool operator==(const Item& other) const
+struct music
+{
+    std::string title;
+    std::string artist;
+    std::vector<track> tracks;
+};
+
+struct software
+{
+    std::string title;
+    std::string vendor;
+};
+
+struct visitor_functor
+{
+    void operator()(movie const& arg) const
     {
-        return id == other.id && name == other.name && value == other.value;
+        std::cout << "Movie:" << std::endl;
+        std::cout << arg.title << std::endl;
+        std::cout << arg.length.count() << std::endl;
+    }
+    void operator()(music const& arg) const
+    {
+        std::cout << "Music:" << std::endl;
+        std::cout << arg.title << std::endl;
+        std::cout << arg.artist << std::endl;
+        std::cout << "Tracks:" << std::endl;
+        for (auto const& t : arg.tracks)
+        {
+            std::cout << t.title << std::endl;
+            std::cout << t.length.count() << std::endl;
+        }
     }
 
-    // Overload the '<<' operator for Item
-    friend std::ostream& operator<<(std::ostream& os, const Item& item) {
-        os << "ID: " << item.id << ", Name: " << item.name << ", Value: " << item.value;
-        return os;
+    void operator()(software const& arg) const
+    {
+        std::cout << "Soft:" << std::endl;
+        std::cout << arg.title << std::endl;
+        std::cout << arg.vendor << std::endl;
     }
 };
 
-namespace std
-{
-    template<>
-    struct hash<Item>
-    {
-        typedef Item argument_type;
-        typedef size_t result_type;
-
-        result_type operator()(argument_type const& item) const
-        {
-            result_type hash_val = 17;
-            hash_val = 31 * hash_val + std::hash<int>()(item.id);
-            hash_val = 31 * hash_val + std::hash<std::string>()(item.name);
-            hash_val = 31 * hash_val + std::hash<double>()(item.value);
-
-            return hash_val;
-        }
-    };
-}
-
+using dvd = std::variant<movie, music, software>;
 
 int main(int argc, char* argv[])
 {
-    std::unordered_set<Item> set{
-        {1, "one", 1.0},
-        {2, "two", 2.0},
-        {3, "three", 3.0},
-    };
+   std::vector dvds
+    {
+       dvd{music{"Back In Black", "AC/DC", {track{"Hells Bells", std::chrono::minutes{3}}, track{"Back In Black", std::chrono::minutes{3}}}}},
+       dvd{movie{"Interstellar", std::chrono::minutes{120}, {genre::action, genre::sf}}},
+       dvd{software{"OpenAI", "OpenAI, Inc."}}
+   };
 
-    for (const Item& item : set) {
-        std::cout << item << std::endl;
-    }
+   for (auto& dvd : dvds)
+   {
+       std::visit([](auto&& arg){std::cout << arg.title << std::endl;}, dvd);
+   }
 
-    return 0;
+   for (auto const& d : dvds)
+   {
+       auto result =
+           std::visit([](auto&& arg) -> dvd
+           {
+               auto cpy{arg};
+               cpy.title = string_helpers::to_upper(cpy.title);
+               return cpy;
+           }, d);
+
+       std::visit([](auto&& arg)
+       {
+           std::cout << arg.title << std::endl;
+       }, result);
+   }
+
+   /*for (auto const& d : dvds)
+   {
+       std::visit(visitor_functor(), d);
+   }*/
+
+   for (auto const& d : dvds)
+   {
+       std::visit([](auto&& arg)
+       {
+           using T = std::decay_t<decltype(arg)>;
+
+           if constexpr (std::is_same_v<T, movie>)
+           {
+               std::cout << "Movie:" << std::endl;
+               std::cout << arg.title << std::endl;
+               std::cout << arg.length.count() << std::endl;
+           }
+           else if constexpr (std::is_same_v<T, music>)
+           {
+                std::cout << "Music:" << std::endl;
+                std::cout << arg.title << std::endl;
+                std::cout << arg.artist << std::endl;
+                std::cout << "Tracks:" << std::endl;
+                for (auto const& t : arg.tracks)
+                {
+                    std::cout << t.title << std::endl;
+                    std::cout << t.length.count() << std::endl;
+                }
+           }
+           else if constexpr (std::is_same_v<T, software>)
+           {
+               std::cout << "Soft:" << std::endl;
+               std::cout << arg.title << std::endl;
+               std::cout << arg.vendor << std::endl;
+           }
+       }, d);
+   }
 }
 
