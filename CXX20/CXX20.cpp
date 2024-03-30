@@ -3,74 +3,70 @@
 #include <chrono>
 #include <variant>
 #include <iostream>
+#include <random>
 #include <span>
 #include "Source/string_helpers.hpp"
 #include <type_traits>
 using namespace std::string_literals;
 
-struct foo
+using long_type = std::conditional_t<
+        sizeof(void*) <= 4, long, long long
+    >;
+
+template<int size>
+using number_type =
+    typename std::conditional_t<
+        size<=1,
+        std::int8_t,
+        typename std::conditional_t<
+            size<=2,
+            std::int16_t,
+            typename std::conditional_t<
+                size<=4,
+                std::int32_t,
+                std::int64_t
+                >
+            >
+        >;
+
+template<typename T,
+         typename D = std::conditional_t<
+            std::is_integral_v<T>,
+            std::uniform_int_distribution<T>,
+            std::uniform_real_distribution<T>
+             >,
+        typename = std::enable_if_t<std::is_arithmetic_v<T>>
+>
+std::vector<T> generate_random(T const min, T const max, size_t const size)
 {
-    std::string serialize()
-    {
-        return "plain"s;
-    }
-};
+    std::vector<T> v(size);
 
-struct bar
-{
-    std::string serialize_with_encoding()
-    {
-        return "encoded"s;
-    }
-};
+    std::random_device rd;
+    std::mt19937 mt(rd());
 
+    D dist(min, max);
 
-template<typename T>
-struct is_serializable_with_encoding
-{
-    static constexpr bool value = false;
-};
+    std::generate(std::begin(v), std::end(v),
+        [&dist, &mt] {return dist(mt);});
 
-template<>
-struct is_serializable_with_encoding<bar>
-{
-    static constexpr bool value = true;
-};
-
-
-template<bool b>
-struct serializer
-{
-    template<typename T>
-    static auto serialize(T& v)
-    {
-        return v.serialize();
-    }
-};
-
-template<>
-struct serializer<true>
-{
-    template<typename T>
-    static auto serialize(T& v)
-    {
-        return v.serialize_with_encoding();
-    }
-};
-
-template<typename T>
-auto serialize(T& v)
-{
-    return serializer<is_serializable_with_encoding<T>::value>::serialize(v);
+    return v;
 }
-
-
 
 int main(int argc, char* argv[])
 {
-    foo f;
-    bar b;
-    std::cout << serialize(f) << std::endl;
-    std::cout << serialize(b) << std::endl;
+    auto v1 = generate_random(1, 10, 10);
+    auto v2 = generate_random(0.0, 1.0, 10);
+
+    for (auto value : v1)
+    {
+        std::cout << value << ' ';
+    }
+
+    std::cout << '\n';
+
+    for (auto value : v2)
+    {
+        std::cout << value << ' ';
+    }
 }
 
