@@ -3,135 +3,74 @@
 #include <chrono>
 #include <variant>
 #include <iostream>
-
+#include <span>
 #include "Source/string_helpers.hpp"
+#include <type_traits>
+using namespace std::string_literals;
 
-
-enum class genre{drama, action, sf, comedy};
-
-struct movie
+struct foo
 {
-    std::string title;
-    std::chrono::minutes length;
-    std::vector<genre> genres;
-};
-
-struct track
-{
-    std::string title;
-    std::chrono::minutes length;
-};
-
-struct music
-{
-    std::string title;
-    std::string artist;
-    std::vector<track> tracks;
-};
-
-struct software
-{
-    std::string title;
-    std::string vendor;
-};
-
-struct visitor_functor
-{
-    void operator()(movie const& arg) const
+    std::string serialize()
     {
-        std::cout << "Movie:" << std::endl;
-        std::cout << arg.title << std::endl;
-        std::cout << arg.length.count() << std::endl;
-    }
-    void operator()(music const& arg) const
-    {
-        std::cout << "Music:" << std::endl;
-        std::cout << arg.title << std::endl;
-        std::cout << arg.artist << std::endl;
-        std::cout << "Tracks:" << std::endl;
-        for (auto const& t : arg.tracks)
-        {
-            std::cout << t.title << std::endl;
-            std::cout << t.length.count() << std::endl;
-        }
-    }
-
-    void operator()(software const& arg) const
-    {
-        std::cout << "Soft:" << std::endl;
-        std::cout << arg.title << std::endl;
-        std::cout << arg.vendor << std::endl;
+        return "plain"s;
     }
 };
 
-using dvd = std::variant<movie, music, software>;
+struct bar
+{
+    std::string serialize_with_encoding()
+    {
+        return "encoded"s;
+    }
+};
+
+
+template<typename T>
+struct is_serializable_with_encoding
+{
+    static constexpr bool value = false;
+};
+
+template<>
+struct is_serializable_with_encoding<bar>
+{
+    static constexpr bool value = true;
+};
+
+
+template<bool b>
+struct serializer
+{
+    template<typename T>
+    static auto serialize(T& v)
+    {
+        return v.serialize();
+    }
+};
+
+template<>
+struct serializer<true>
+{
+    template<typename T>
+    static auto serialize(T& v)
+    {
+        return v.serialize_with_encoding();
+    }
+};
+
+template<typename T>
+auto serialize(T& v)
+{
+    return serializer<is_serializable_with_encoding<T>::value>::serialize(v);
+}
+
+
 
 int main(int argc, char* argv[])
 {
-   std::vector dvds
-    {
-       dvd{music{"Back In Black", "AC/DC", {track{"Hells Bells", std::chrono::minutes{3}}, track{"Back In Black", std::chrono::minutes{3}}}}},
-       dvd{movie{"Interstellar", std::chrono::minutes{120}, {genre::action, genre::sf}}},
-       dvd{software{"OpenAI", "OpenAI, Inc."}}
-   };
-
-   for (auto& dvd : dvds)
-   {
-       std::visit([](auto&& arg){std::cout << arg.title << std::endl;}, dvd);
-   }
-
-   for (auto const& d : dvds)
-   {
-       auto result =
-           std::visit([](auto&& arg) -> dvd
-           {
-               auto cpy{arg};
-               cpy.title = string_helpers::to_upper(cpy.title);
-               return cpy;
-           }, d);
-
-       std::visit([](auto&& arg)
-       {
-           std::cout << arg.title << std::endl;
-       }, result);
-   }
-
-   /*for (auto const& d : dvds)
-   {
-       std::visit(visitor_functor(), d);
-   }*/
-
-   for (auto const& d : dvds)
-   {
-       std::visit([](auto&& arg)
-       {
-           using T = std::decay_t<decltype(arg)>;
-
-           if constexpr (std::is_same_v<T, movie>)
-           {
-               std::cout << "Movie:" << std::endl;
-               std::cout << arg.title << std::endl;
-               std::cout << arg.length.count() << std::endl;
-           }
-           else if constexpr (std::is_same_v<T, music>)
-           {
-                std::cout << "Music:" << std::endl;
-                std::cout << arg.title << std::endl;
-                std::cout << arg.artist << std::endl;
-                std::cout << "Tracks:" << std::endl;
-                for (auto const& t : arg.tracks)
-                {
-                    std::cout << t.title << std::endl;
-                    std::cout << t.length.count() << std::endl;
-                }
-           }
-           else if constexpr (std::is_same_v<T, software>)
-           {
-               std::cout << "Soft:" << std::endl;
-               std::cout << arg.title << std::endl;
-               std::cout << arg.vendor << std::endl;
-           }
-       }, d);
-   }
+    foo f;
+    bar b;
+    std::cout << serialize(f) << std::endl;
+    std::cout << serialize(b) << std::endl;
 }
 
