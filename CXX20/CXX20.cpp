@@ -1,29 +1,21 @@
-
 #include <iostream>
+#include <string>
 
-template<typename T>
-struct wrapper
-{
-    T const& value;
-};
+#include "Source/compose.hpp"
 
-template<typename T>
-constexpr auto operator<(wrapper<T> const& lhs, wrapper<T> const& rhs)
-{
-    return wrapper<T>{
-        lhs.value < rhs.value ? lhs.value : rhs.value
-    };
-}
-
-template<typename... Ts>
-constexpr auto min(Ts&&... rest)
-{
-    return (wrapper<Ts>{rest} < ...).value;
-}
 
 int main(int argc, char* argv[])
 {
 
-    std::cout << min(23, 32, 3, 2, 43, 1);
+
+    using namespace compose;
+    
+    auto n =
+    ([](int const n){return std::to_string(n);} *
+    [](int const n) {return n*n;} *
+    [](int const n) {return n + n;} *
+    [](int const n) {return std::abs(n);});
+
+    std::cout << n(3);
 }
 
