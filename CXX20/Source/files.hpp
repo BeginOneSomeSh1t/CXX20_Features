@@ -2,9 +2,14 @@
 #include <fstream>
 #include <iostream>
 #include <functional>
+#include <filesystem>
+#include <vector>
 
 namespace files
 {
+
+    using namespace std::filesystem;
+    
     template<typename T>
     bool write_raw_data(std::string_view filename, T const data, size_t const size)
     {
@@ -57,4 +62,20 @@ namespace files
         return readbytes;
     }
 
+    std::vector<path> find_files(path const& dir, std::function<bool(path const&)> filter)
+    {
+        std::vector<path> result;
+
+        if(exists(dir))
+        {
+            for (auto const& entry : recursive_directory_iterator{ dir, directory_options::follow_directory_symlink })   
+            {
+                if(is_regular_file(entry) && filter(entry))
+                {
+                    result.push_back(entry);
+                }
+            }
+        }
+        return result;
+    }
 }
