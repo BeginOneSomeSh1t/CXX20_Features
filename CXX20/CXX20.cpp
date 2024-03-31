@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <filesystem>
+namespace fs = std::filesystem;
 #include "Source/files.hpp"
 #include <iostream>
 #include <chrono>
@@ -18,34 +19,49 @@ void print_range(R&& r)
 int main(int argc, char* argv[])
 {
     using namespace std::string_literals;
-    auto now = std::chrono::system_clock::now();
-    auto stime = std::chrono::system_clock::to_time_t(now);
-    auto ltime = std::localtime(&stime);
+    const auto path{ fs::current_path() };
+    const auto filepath{ path / "sample.dat" };
+    const auto temppath{ path / "sample.tmp" };
+    auto err{ std::error_code{} };
 
-    std::vector<std::string> names{
-    "John",
-        "Sarah",
-        "Burak"
-    };
-
-    auto sort_and_print = [](std::vector<std::string> v, std::locale const& loc)
+    std::ifstream in{ filepath };
+    if(!in.is_open())
     {
-        std::sort(v.begin(), v.end(), loc);
-        for (auto const& s : v)
+        std::cout << "File could not be opened!";
+        return 1;
+    }
+
+    std::ofstream out{ temppath, std::ios::trunc };
+    if(!out.is_open())
+    {
+        std::cout << "Temporary file could not be created!";
+        return 1;
+    }
+
+    auto line{ ""s };
+    while(std::getline(in, line))
+    {
+        if(!line.empty() && line.at(0) != ';')
         {
-            std::cout << s << ' ';
+            out << line << '\n';
         }
-        std::cout << '\n';
-    };
-    
-    auto loc{ std::locale::classic() };
-    std::cout.imbue(loc);
+    }
 
-    std::cout << 1000.50 << '\n';
-    std::cout << std::showbase << std::put_money(1050) << '\n';
-    std::cout << std::put_time(ltime, "%c") << '\n';
+    in.close();
+    out.close();
 
-    sort_and_print(names, loc);
+    auto success{ fs::remove(filepath, err) };
+    if(!success || err)
+    {
+        std::cout << err.message() << '\n';
+        return 1;
+    }
+
+    fs::rename(temppath, filepath, err);
+    if(err)
+    {
+        std::cout << err.message() << '\n';
+    }
 
     
 
