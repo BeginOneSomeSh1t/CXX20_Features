@@ -1,72 +1,44 @@
-#include <algorithm>
-#include <string>
-#include <chrono>
-#include <variant>
+#include <filesystem>
+#include "Source/files.hpp"
 #include <iostream>
-#include <random>
-#include <span>
-#include "Source/string_helpers.hpp"
-#include <type_traits>
-using namespace std::string_literals;
+#include <chrono>
 
-using long_type = std::conditional_t<
-        sizeof(void*) <= 4, long, long long
-    >;
 
-template<int size>
-using number_type =
-    typename std::conditional_t<
-        size<=1,
-        std::int8_t,
-        typename std::conditional_t<
-            size<=2,
-            std::int16_t,
-            typename std::conditional_t<
-                size<=4,
-                std::int32_t,
-                std::int64_t
-                >
-            >
-        >;
-
-template<typename T,
-         typename D = std::conditional_t<
-            std::is_integral_v<T>,
-            std::uniform_int_distribution<T>,
-            std::uniform_real_distribution<T>
-             >,
-        typename = std::enable_if_t<std::is_arithmetic_v<T>>
->
-std::vector<T> generate_random(T const min, T const max, size_t const size)
+template<typename R>
+void print_range(R&& r)
 {
-    std::vector<T> v(size);
-
-    std::random_device rd;
-    std::mt19937 mt(rd());
-
-    D dist(min, max);
-
-    std::generate(std::begin(v), std::end(v),
-        [&dist, &mt] {return dist(mt);});
-
-    return v;
+    for (auto&& e : r)
+    {
+        std::cout << e << ' ';
+    }
+    std::cout << '\n';
 }
+
 
 int main(int argc, char* argv[])
 {
-    auto v1 = generate_random(1, 10, 10);
-    auto v2 = generate_random(0.0, 1.0, 10);
+    using namespace std::string_literals;
 
-    for (auto value : v1)
+    const auto start{ std::chrono::high_resolution_clock::now() };
+    std::vector<unsigned char> input;
+    std::ifstream ifile{ "sample.bin", std::ios::binary };
+    
+    if(ifile.is_open())
     {
-        std::cout << value << ' ';
+        ifile.seekg(0, std::ios::end);
+        auto length{ ifile.tellg() };
+        ifile.seekg(0, std::ios::beg);
+
+        input.reserve(static_cast<size_t>(length));
+        input.assign(std::istreambuf_iterator<char>{ifile}, {});
     }
 
-    std::cout << '\n';
-
-    for (auto value : v2)
-    {
-        std::cout << value << ' ';
-    }
+    
+    auto diff{ std::chrono::high_resolution_clock::now() - start };
+    std::cout << "Time taken to process input is " << std::chrono::duration<double, std::milli>(diff).count();
+    print_range(input);
 }
 
+// 0,2174 with std::copy
+// 0.1587 with read_data function
+// ~ 0,15 with std::istreambuf_iterator
