@@ -6,7 +6,7 @@
 namespace files
 {
     template<typename T>
-    bool write_data(std::string_view filename, T const data, size_t const size)
+    bool write_raw_data(std::string_view filename, T const data, size_t const size)
     {
         auto success{ false };
         std::ofstream ofile{ filename.data(), std::ios::binary };
@@ -29,7 +29,7 @@ namespace files
     }
 
     template<typename T>
-    size_t read_data(std::string_view filename,
+    size_t read_raw_data(std::string_view filename,
         std::function<T*(size_t const)> allocator)
     {
         size_t readbytes = 0;
@@ -56,4 +56,5 @@ namespace files
         }
         return readbytes;
     }
+
 }
