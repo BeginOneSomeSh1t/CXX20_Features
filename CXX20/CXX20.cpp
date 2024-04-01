@@ -5,6 +5,7 @@
 #include "Source/map_fold.hpp"
 #include "Source/time.hpp"
 #include <cassert>
+#include <execution>
 
 inline void print_time()
 {
@@ -81,14 +82,14 @@ int main(int argc, char* argv[])
        auto tpm{
            performance_timer<>::duration([&]
            {
-               async_map(std::begin(v2), std::end(v2), [](int const i){return i + i;});
+               std::transform(std::execution::par, std::begin(v2), std::end(v2), std::begin(v2), [](int const i){return i + i;});
            })
        };
 
        auto tpf{
             performance_timer<>::duration([&]
             {
-                s2 = async_foldl(std::begin(v2), std::end(v2), 0LL, std::plus<long long>{});
+                s2 = std::reduce(std::execution::par, std::begin(v2), std::end(v2), 0LL, std::plus<long long>{});
             })
        };
 
