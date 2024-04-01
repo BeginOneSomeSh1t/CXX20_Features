@@ -2,12 +2,9 @@
 
 #include <iostream>
 #include <chrono>
-#include <thread>
-#include <mutex>
-#include <exception>
-#include <condition_variable>
-#include <queue>
-#include <random>
+#include "Source/map_fold.hpp"
+#include "Source/time.hpp"
+#include <cassert>
 
 inline void print_time()
 {
@@ -28,101 +25,87 @@ void print_range(R&& r)
     std::cout << '\n';
 }
 
-std::mutex g_lockprint;
-std::mutex g_lockqueue;
-std::condition_variable g_queuecheck;
-std::queue<int> g_buffer;
-bool g_done;
 
-void producer(
-     int const                           id,
-     std::mt19937&                       generator,
-     std::uniform_int_distribution<int>& dsleep,
-     std::uniform_int_distribution<int>& dcode
-)
-{
-    for (int i = 0; i < 5; ++i)
-    {
-        // simulate work
-        std::this_thread::sleep_for(
-        std::chrono::seconds(dsleep(generator))
-        );
-    }
-
-    // generate data
-    {
-        std::unique_lock lock{ g_lockqueue };
-        const int value{ id * 100 + dcode(generator) };
-        g_buffer.push(value);
-
-        {
-            std::unique_lock io_lock{ g_lockprint };
-            std::cout << std::format("[produced({})]: {} \n", id, value) << std::flush;
-        }
-    }
-
-    // notify consumers
-    g_queuecheck.notify_one();
-}
-
-void consumer()
-{
-    // loop untill end is signaled
-    while(!g_done)
-    {
-        std::unique_lock lock{ g_lockqueue };
-
-        g_queuecheck.wait_for(
-            lock,
-            std::chrono::seconds{ 1 },
-            [&]{ return !g_buffer.empty(); }
-        );
-
-        while(!g_done && !g_buffer.empty())
-        {
-            std::unique_lock print_lock{ g_lockprint };
-            std::cout << std::format("[consumed]: {} \n", g_buffer.front()) << std::flush;
-            g_buffer.pop();
-        }
-    }
-}
 
 int main(int argc, char* argv[])
 {
-    std::array<int, std::mt19937::state_size> seed_data;
-    std::random_device rd;
-    std::generate(seed_data.begin(), seed_data.end(), std::ref(rd));
+   using namespace higher_order_functions;
 
-    std::seed_seq seq{ seed_data.begin(), seed_data.end() };
-    std::mt19937 generator{ seq };
-    std::uniform_int_distribution<> dsleep{ 1, 5 };
-    std::uniform_int_distribution<> dcode{ 1, 99 };
-
-    std::cout << "Start producing and consuming..." << std::flush << '\n';
-
-    std::thread consumer_thread{ consumer };
-    std::vector<std::thread> threads;
-    for (int i = 0; i < 5; ++i)
+    std::vector<int> sizes
     {
-        threads.emplace_back(
-                producer,
-                i + 1,
-                std::ref(generator),
-                std::ref(dsleep),
-                std::ref(dcode)
-        );
-    }
+        10000, 100000, 500000,
+        1000000, 2000000, 5000000,
+        10000000, 20000000, 50000000
+    };
 
-    // work for the workers to finish
-    for (auto& t : threads)
-    {
-        t.join();
-    }
+    std::cout
+        << std::right << std::setw(8) << std::setfill(' ') << "size"
+        << std::right << std::setw(8) << "s map"
+        << std::right << std::setw(8) << "p map"
+        << std::right << std::setw(8) << "s fold"
+        << std::right << std::setw(8) << "p fold"
+        << '\n';
 
-    // notify the looger to finish and wait for it
-    g_done = true;
-    consumer_thread.join();
+   for (auto const size : sizes)
+   {
+       std::vector<int> v(size);
+       std::iota(std::begin(v), std::end(v), 1);
 
-    std::cout << "done producing and consuming...";
+       auto v1{ v };
+       auto s1{ 0LL };
+
+       auto tsm{
+           performance_timer<>::duration(
+               [&]
+               {
+                   std::transform(std::begin(v1), std::end(v1), std::begin(v1),
+                       [](int const i)
+                       {
+                           return i + i;
+                       });
+               }
+           )
+       };
+
+       auto tsf
+       {
+           performance_timer<>::duration([&]
+           {
+               s1 = std::accumulate(std::begin(v1), std::end(v1), 0LL, std::plus<>{});
+           })
+       };
+
+       auto v2{ v };
+       auto s2{ 0LL };
+
+       auto tpm{
+           performance_timer<>::duration([&]
+           {
+               parallel_map(std::begin(v2), std::end(v2), [](int const i){return i + i;});
+           })
+       };
+
+       auto tpf{
+            performance_timer<>::duration([&]
+            {
+                s2 = parallel_foldl(std::begin(v2), std::end(v2), 0LL, std::plus<long long>{});
+            })
+       };
+
+        assert(v1 == v2);
+        assert(s1 == s2);
+
+        std::cout
+            << std::right << std::setw(8) << std::setfill(' ') << size
+            << std::right << std::setw(8)
+            << std::chrono::duration<double, std::micro>{ tsm }.count()
+            << std::right << std::setw(8)
+            << std::chrono::duration<double, std::micro>{ tpm }.count()
+            << std::right << std::setw(8)
+            << std::chrono::duration<double, std::micro>{ tsf }.count()
+            << std::right << std::setw(8)
+            << std::chrono::duration<double, std::micro>{ tpf }.count()
+            << '\n';
+   }
 }
 

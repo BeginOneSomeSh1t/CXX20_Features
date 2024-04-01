@@ -3,10 +3,14 @@
 #include <map>
 #include <numeric>
 #include <queue>
+#include "threads.hpp"
 
 
 namespace higher_order_functions
 {
+
+    static constexpr int concurrency_threshold{ 500'000 };
+    
     inline namespace map_f
     {
         template<typename F, typename R>
@@ -39,6 +43,43 @@ namespace higher_order_functions
                 q.pop();
             }
             return r;
+        }
+
+        template<typename Iter, typename F>
+        void parallel_map(Iter begin, Iter end, F f)
+        {
+            const auto size{ std::distance(begin, end) };
+
+            // If the size is less than the threshold, map in a sequential order
+            if(size <= concurrency_threshold)
+            {
+                std::transform(begin, end, begin, std::forward<F>(f));
+            }
+            else
+            {
+                const auto num_of_threads{ get_num_of_threads() };
+                const auto part{ size / num_of_threads };
+                auto last{ begin };
+
+                std::vector<std::thread> threads;
+                for (unsigned i = 0; i < num_of_threads; ++i)
+                {
+                    if(i == num_of_threads - 1) last = end;
+                    else std::advance(last, part);
+
+                    threads.emplace_back(
+                    [=, &f]{std::transform(begin, last, begin, std::forward<F>(f));}
+                    );
+
+                    begin = last;
+                }
+
+                // Join all threads
+                for (auto& t : threads)
+                {
+                    t.join();
+                }
+            }
         }
     }
 
@@ -85,6 +126,45 @@ namespace higher_order_functions
         auto tfoldl(F&& func, T head, Ts... rest)
         {
             return func(head, tfoldl(std::forward<F>(func), rest...));
+        }
+
+        template<typename Iter, typename R, typename F>
+        auto parallel_foldl(Iter begin, Iter end, R init, F op)
+        {
+            const auto size{ std::distance(begin, end) };
+            if(size <= concurrency_threshold)
+                return std::accumulate(begin, end, init, std::forward<F>(op));
+            else
+            {
+                const auto num_of_threads{ get_num_of_threads() };
+                const auto part{ size / num_of_threads };
+                auto last{ begin };
+
+                std::vector<std::thread> threads;
+                std::vector<R> values(num_of_threads);
+
+                for (unsigned i = 0; i < num_of_threads; ++i)
+                {
+                    if(i == num_of_threads - 1) last = end;
+                    else std::advance(last, part);
+
+                    threads.emplace_back(
+                            [=, &op](R& result)
+                            {
+                                result = std::accumulate(begin, last, R{}, std::forward<F>(op));
+                            },
+                            std::ref(values[i])
+                    );
+
+                    begin = last;
+                }
+                for (auto& thread : threads)
+                {
+                    thread.join();
+                }
+
+                return std::accumulate(std::begin(values), std::end(values), init, std::forward<F>(op));
+            }
         }
     }
 
