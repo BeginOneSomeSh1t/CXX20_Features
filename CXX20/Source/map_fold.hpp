@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <algorithm>
+#include <future>
 #include <map>
 #include <numeric>
 #include <queue>
@@ -78,6 +79,43 @@ namespace higher_order_functions
                 for (auto& t : threads)
                 {
                     t.join();
+                }
+            }
+        }
+
+        template<typename Iter, typename F>
+        void async_map(Iter begin, Iter end, F f)
+        {
+            const auto size{ std::distance(begin, end) };
+            if(size <= concurrency_threshold)
+            {
+                std::transform(begin, end, begin, std::forward<F>(f));
+            }
+            else
+            {
+                const auto num_of_tasks{ get_num_of_threads() };
+                const auto part{ size / num_of_tasks };
+                auto last{ begin };
+
+                std::vector<std::future<void>> tasks;
+                for (unsigned i = 0; i < num_of_tasks; ++i)
+                {
+                    if(i == num_of_tasks - 1) last = end;
+                    else std::advance(last, part);
+
+                    tasks.emplace_back(
+                          std::async(
+                               std::launch::async,
+                               [=, &f]{ std::transform(begin, last, begin, std::forward<F>(f)); }
+                          )  
+                    );
+
+                    begin = last;
+                }
+
+                for (auto& task : tasks)
+                {
+                    task.wait();
                 }
             }
         }
@@ -164,6 +202,47 @@ namespace higher_order_functions
                 }
 
                 return std::accumulate(std::begin(values), std::end(values), init, std::forward<F>(op));
+            }
+        }
+
+        template<typename Iter, typename R, typename F>
+        auto async_foldl(Iter begin, Iter end, R init, F f)
+        {
+            const auto size{ std::distance(begin, end) };
+            if(size <= concurrency_threshold)
+            {
+                return std::accumulate(begin, end, init, std::forward<F>(f));
+            }
+            else
+            {
+                const auto num_of_tasks{ get_num_of_threads() };
+                const auto part{ size / num_of_tasks };
+                auto last{ begin };
+
+                std::vector<std::future<R>> tasks;
+                for (unsigned i = 0; i < num_of_tasks; ++i)
+                {
+                    if(i == num_of_tasks - 1) last = end;
+                    else std::advance(last, part);
+
+                    tasks.emplace_back( 
+                          std::async(
+                               std::launch::async,
+                               [=, &f]{ return std::accumulate(begin, last, R{}, std::forward<F>(f)); }
+                          )  
+                     );
+
+                    begin = last;
+                }
+
+                std::vector<R> values;
+                values.reserve(num_of_tasks);
+                for (auto& fut : tasks)
+                {
+                    values.push_back(fut.get());
+                }
+
+                return std::accumulate(std::begin(values), std::end(values), init, std::forward<F>(f));
             }
         }
     }

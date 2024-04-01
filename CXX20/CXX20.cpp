@@ -81,14 +81,14 @@ int main(int argc, char* argv[])
        auto tpm{
            performance_timer<>::duration([&]
            {
-               parallel_map(std::begin(v2), std::end(v2), [](int const i){return i + i;});
+               async_map(std::begin(v2), std::end(v2), [](int const i){return i + i;});
            })
        };
 
        auto tpf{
             performance_timer<>::duration([&]
             {
-                s2 = parallel_foldl(std::begin(v2), std::end(v2), 0LL, std::plus<long long>{});
+                s2 = async_foldl(std::begin(v2), std::end(v2), 0LL, std::plus<long long>{});
             })
        };
 
