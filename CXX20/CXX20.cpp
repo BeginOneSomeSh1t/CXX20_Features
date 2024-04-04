@@ -34,28 +34,66 @@ int generate_random_int()
     return std::uniform_int_distribution<>{ 0, 99 }(mtgen);
 }
 
+class control;
+
+class control_properties
+{
+    int _Id;
+    std::string _Text;
+    int _Width;
+    int _Height;
+    bool _Visible;
+    friend class control;
+public:
+    control_properties(int const _Val) : _Id(_Val)
+    {}
+    
+    control_properties& text(std::string_view _Val)
+    {
+        _Text = _Val.data(); return *this;
+    }
+    
+    control_properties& width(int const _Val)
+    {
+        _Width = _Val; return *this;
+    }    
+    control_properties& height(int const _Val)
+    {
+        _Height = _Val; return *this;
+    }
+    control_properties& visible(bool const _Val)
+    {
+        _Visible = _Val; return *this;
+    }
+};
+
 class control
 {
+    int _Id;
     std::string _Text;
-    int _Width = 0;
-    int _Height = 0;
-    bool _Visible = true;
-
-    void _Draw()
-    {
-        std::cout
-        << "control " << '\n'
-        << " visible: " << std::boolalpha << _Visible <<
-            std::noboolalpha << '\n'
-        << " size: " << _Width << ", " << _Height << '\n'
-        << " text: " << _Text << '\n';
-    }
-
+    int _Width;
+    int _Height;
+    bool _Visible;
+public:
+    control(control_properties const& _Cp)
+        :
+    _Id(_Cp._Id),
+    _Text(_Cp._Text),
+    _Width(_Cp._Width),
+    _Height(_Cp._Height),
+    _Visible(_Cp._Visible)
+    {}
 };
 
 
 int main(int argc, char* argv[])
 {
+    control c{ control_properties{ 1044 }
+                .height(232)
+                .width(323)
+                .visible(true)
+                .text("Hello world!")
+    };
     
 }
    
