@@ -1,11 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <array>
 #include <iostream>
 #include <chrono>
-#include "Source/map_fold.hpp"
-#include "Source/time.hpp"
-#include <cassert>
-#include <execution>
+#include <random>
+#include <fstream>
+#include <functional>
+#include <map>
 
 inline void print_time()
 {
@@ -21,92 +22,55 @@ void print_range(R&& r)
 {
     for (auto&& e : r)
     {
-        std::cout << e << ' ';
+        std::cout << e << ' ' << std::flush;
     }
-    std::cout << '\n';
+    std::cout << '\n' << std::flush;
 }
 
+int generate_random_int()
+{
+    std::random_device rd;
+    std::mt19937 mtgen{ rd() };
+    return std::uniform_int_distribution<>{ 0, 99 }(mtgen);
+}
 
+struct image {};
+struct bitmap_image : public image {};
+struct png_image : public image {};
+struct jpg_image : public image {};
+
+struct image_factory_interface
+{
+    virtual std::unique_ptr<image> create(std::type_info const& _Type) = 0;
+};
+
+struct image_factory : public image_factory_interface
+{
+    virtual std::unique_ptr<image> create(std::type_info const& _Type) override
+    {
+        
+    }
+private:
+    static std::map<
+        std::type_info const*,
+        std::function<std::unique_ptr<image>()>
+        > _Mapping;
+};
+
+std::map<
+       std::type_info const*,
+       std::function<std::unique_ptr<image>()>
+       > image_factory::_Mapping
+{
+    {&typeid(bitmap_image), []{return std::make_unique<bitmap_image>();}},
+    {&typeid(png_image), []{return std::make_unique<png_image>();}},
+    {&typeid(jpg_image), []{return std::make_unique<jpg_image>();}},
+};
 
 int main(int argc, char* argv[])
 {
-   using namespace higher_order_functions;
-
-    std::vector<int> sizes
-    {
-        10000, 100000, 500000,
-        1000000, 2000000, 5000000,
-        10000000, 20000000, 50000000
-    };
-
-    std::cout
-        << std::right << std::setw(8) << std::setfill(' ') << "size"
-        << std::right << std::setw(8) << "s map"
-        << std::right << std::setw(8) << "p map"
-        << std::right << std::setw(8) << "s fold"
-        << std::right << std::setw(8) << "p fold"
-        << '\n';
-
-   for (auto const size : sizes)
-   {
-       std::vector<int> v(size);
-       std::iota(std::begin(v), std::end(v), 1);
-
-       auto v1{ v };
-       auto s1{ 0LL };
-
-       auto tsm{
-           performance_timer<>::duration(
-               [&]
-               {
-                   std::transform(std::begin(v1), std::end(v1), std::begin(v1),
-                       [](int const i)
-                       {
-                           return i + i;
-                       });
-               }
-           )
-       };
-
-       auto tsf
-       {
-           performance_timer<>::duration([&]
-           {
-               s1 = std::accumulate(std::begin(v1), std::end(v1), 0LL, std::plus<>{});
-           })
-       };
-
-       auto v2{ v };
-       auto s2{ 0LL };
-
-       auto tpm{
-           performance_timer<>::duration([&]
-           {
-               std::transform(std::execution::par, std::begin(v2), std::end(v2), std::begin(v2), [](int const i){return i + i;});
-           })
-       };
-
-       auto tpf{
-            performance_timer<>::duration([&]
-            {
-                s2 = std::reduce(std::execution::par, std::begin(v2), std::end(v2), 0LL, std::plus<long long>{});
-            })
-       };
-
-        assert(v1 == v2);
-        assert(s1 == s2);
-
-        std::cout
-            << std::right << std::setw(8) << std::setfill(' ') << size
-            << std::right << std::setw(8)
-            << std::chrono::duration<double, std::micro>{ tsm }.count()
-            << std::right << std::setw(8)
-            << std::chrono::duration<double, std::micro>{ tpm }.count()
-            << std::right << std::setw(8)
-            << std::chrono::duration<double, std::micro>{ tsf }.count()
-            << std::right << std::setw(8)
-            << std::chrono::duration<double, std::micro>{ tpf }.count()
-            << '\n';
-   }
+    image_factory factory;
+    auto image{ factory.create(typeid(png_image)) };  // Creates png image
 }
+   
 
