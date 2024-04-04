@@ -34,43 +34,29 @@ int generate_random_int()
     return std::uniform_int_distribution<>{ 0, 99 }(mtgen);
 }
 
-struct image {};
-struct bitmap_image : public image {};
-struct png_image : public image {};
-struct jpg_image : public image {};
-
-struct image_factory_interface
+class control
 {
-    virtual std::unique_ptr<image> create(std::type_info const& _Type) = 0;
-};
+    std::string _Text;
+    int _Width = 0;
+    int _Height = 0;
+    bool _Visible = true;
 
-struct image_factory : public image_factory_interface
-{
-    virtual std::unique_ptr<image> create(std::type_info const& _Type) override
+    void _Draw()
     {
-        
+        std::cout
+        << "control " << '\n'
+        << " visible: " << std::boolalpha << _Visible <<
+            std::noboolalpha << '\n'
+        << " size: " << _Width << ", " << _Height << '\n'
+        << " text: " << _Text << '\n';
     }
-private:
-    static std::map<
-        std::type_info const*,
-        std::function<std::unique_ptr<image>()>
-        > _Mapping;
+
 };
 
-std::map<
-       std::type_info const*,
-       std::function<std::unique_ptr<image>()>
-       > image_factory::_Mapping
-{
-    {&typeid(bitmap_image), []{return std::make_unique<bitmap_image>();}},
-    {&typeid(png_image), []{return std::make_unique<png_image>();}},
-    {&typeid(jpg_image), []{return std::make_unique<jpg_image>();}},
-};
 
 int main(int argc, char* argv[])
 {
-    image_factory factory;
-    auto image{ factory.create(typeid(png_image)) };  // Creates png image
+    
 }
    
 
