@@ -2,12 +2,10 @@
 #include <iostream>
 #include <format>
 
+
 class control_pimpl
 {
-    std::string _Text;
-    int _Width;
-    int _Height;
-    bool _Visible = true;
+    _Control_data _Data;
 
     void _Draw()
     {
@@ -15,28 +13,35 @@ class control_pimpl
                                  " text: {}\n "
                                  " size: {} {} \n"
                                  " visible: {}",
-                                 _Text, _Width, _Height, _Visible);
+                                 _Data._Text, _Data._Width, _Data._Height, _Data._Visible);
     }
 public:
+
+    control_pimpl() = default;
+    control_pimpl(control_properties const& _Properties)
+        :
+    _Data(_Properties._Data)
+    {  }
+    
     void set_text(std::string_view _Text)
     {
-        this->_Text = _Text.data();
+        _Data._Text = _Text.data();
     }
     void resize(int const _Width, int const _Height)
     {
-        this->_Width = _Width;
-        this->_Height = _Height;
+       _Data._Width = _Width;
+        _Data._Height = _Height;
     }
     
     void show()
     {
-        _Visible = true;
+        _Data._Visible = true;
         _Draw();
     }
     
     void hide()
     {
-        _Visible = false;
+        _Data._Visible = false;
         _Draw();
     }
 };
@@ -46,6 +51,12 @@ public:
 control::control()
     :
 _Pimpl(new control_pimpl(), [](control_pimpl* _P){delete _P;})
+{
+}
+
+control::control(control_properties const& _Prop)
+    :
+_Pimpl(new control_pimpl(_Prop), [](control_pimpl* _P){delete _P;})
 {
 }
 

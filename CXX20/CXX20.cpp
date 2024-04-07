@@ -1,21 +1,10 @@
-#define _CRT_SECURE_NO_WARNINGS
 
-#include <array>
+
 #include <iostream>
-#include <chrono>
 #include <random>
-#include <fstream>
-#include <functional>
-#include <map>
-
-inline void print_time()
-{
-    auto now{ std::chrono::system_clock::now() };
-    auto stime{ std::chrono::system_clock::to_time_t(now) };
-    auto ltime{ std::localtime(&stime) };
-
-    std::cout << std::put_time(ltime, "%c") << '\n';
-}
+#include "Source/trim_view.hpp"
+#include "Source/concurency/task.hpp"
+#include "Source/concurency/generator.hpp"
 
 template<typename R>
 void print_range(R&& r)
@@ -27,74 +16,105 @@ void print_range(R&& r)
     std::cout << '\n' << std::flush;
 }
 
-int generate_random_int()
+task<int> get_answer()
+{
+    co_return 42;
+}
+
+task<> print_answer()
+{
+    auto t{ co_await get_answer() };
+    std::cout << "Anwer is " << t << '\n';
+}
+
+template<typename _Ty>
+void execute(_Ty&& _Task)
+{
+    while(!_Task.is_ready()) _Task.resume();
+}
+
+task<int> generate_random_int()
 {
     std::random_device rd;
     std::mt19937 mtgen{ rd() };
-    return std::uniform_int_distribution<>{ 0, 99 }(mtgen);
+    co_return std::uniform_int_distribution<>{ 0, 99 }(mtgen);
 }
 
-class control;
-
-class control_properties
+template<typename _Ty>
+void await(_Ty& _Task)
 {
-    int _Id;
-    std::string _Text;
-    int _Width;
-    int _Height;
-    bool _Visible;
-    friend class control;
-public:
-    control_properties(int const _Val) : _Id(_Val)
-    {}
-    
-    control_properties& text(std::string_view _Val)
-    {
-        _Text = _Val.data(); return *this;
-    }
-    
-    control_properties& width(int const _Val)
-    {
-        _Width = _Val; return *this;
-    }    
-    control_properties& height(int const _Val)
-    {
-        _Height = _Val; return *this;
-    }
-    control_properties& visible(bool const _Val)
-    {
-        _Visible = _Val; return *this;
-    }
-};
+    while(!_Task.is_ready()) _Task.resume();
+}
 
-class control
+template<typename _Ty>
+void gather(std::vector<_Ty>& _Tasks)
 {
-    int _Id;
-    std::string _Text;
-    int _Width;
-    int _Height;
-    bool _Visible;
-public:
-    control(control_properties const& _Cp)
-        :
-    _Id(_Cp._Id),
-    _Text(_Cp._Text),
-    _Width(_Cp._Width),
-    _Height(_Cp._Height),
-    _Visible(_Cp._Visible)
-    {}
-};
+    for (auto& task : _Tasks)
+    {
+        await(task);
+    }
+}
 
-
-int main(int argc, char* argv[])
+generator<int> iota(int const _Start = 0, int const _Step = 1)
 {
-    control c{ control_properties{ 1044 }
-                .height(232)
-                .width(323)
-                .visible(true)
-                .text("Hello world!")
-    };
+    auto value{ _Start };
+    for (int i = 0;; ++i)
+    {
+        co_yield value;
+        value += _Step;
+    }
+}
+
+generator<std::optional<int>> iota_n(
+    int const _Start = 0, int const _Step = 1,
+    int _Lim = std::numeric_limits<int>::max()
+) noexcept
+{
+    auto value{ _Start };
+    for (int i = 0; i < _Lim; ++i)
+    {
+        co_yield value;
+        value += _Step;
+    }
+}
+
+generator<int> fibonacci() noexcept
+{
+    int a = 0, b = 1;
+    while(true)
+    {
+        co_yield b;
+        auto tmp{ a };
+        a = b;
+        b += tmp;
+    }
+}
+
+
+int main(int argc, char** argv)
+{
+    for (auto i : iota())
+    {
+        std::cout << i << ' ';
+        if(i >= 10) break;
+    }
+    std::cout << '\n';
+
+
+    for (auto i : iota_n(0, 1, 10))
+    {
+        if(!i.has_value()) break;
+        std::cout << i.value() << ' ';
+    }
+    std::cout << '\n';
+
+    int c{ 1 };
+    for (auto i : fibonacci())
+    {
+        std::cout << i << ' ';
+        if(++c > 10) break;
+    }
+
+
     
 }
-   
-
